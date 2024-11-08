@@ -1,0 +1,64 @@
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+
+services:
+    # default configuration for services in *this* file
+    cache.redis_connection:
+        class: Redis
+        factory: [ 'Symfony\Component\Cache\Adapter\RedisAdapter', 'createConnection' ]
+        arguments:
+            - '%env(REDIS_URL)%'
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    _instanceof:
+        App\Shared\Domain\Bus\HandlerInterface:
+            tags: [ 'messenger.message_handler' ]
+
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Domain/'
+            - '../src/Kernel.php'
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
+
+    Aws\S3\S3Client:
+        class: Aws\S3\S3Client
+        factory: [ Aws\S3\S3Client, 'factory' ] # Corregido
+        arguments:
+            -
+                credentials: { key: "%env(AWS_ACCESS_KEY_ID)%", secret: "%env(AWS_SECRET_ACCESS_KEY)%" }
+                region: "%env(AWS_REGION)%"
+                version: 'latest'
+
+    App\User\Infrastructure\Symfony\AwsS3\S3ImageUploader:
+        arguments:
+            $bucketName: '%env(AWS_BUCKET_NAME)%'
+
+    monolog.newline_formatter:
+        class: Monolog\Formatter\LineFormatter
+        arguments:
+            - null
+            - 'Y-m-d H:i:s'
+            - true
+
+    Monolog\Processor\WebProcessor:
+        tags:
+            - { name: monolog.processor }
+
+    Monolog\Processor\TagProcessor:
+        arguments:
+            - { env: '%env(APP_ENV)%', node: '%env(SERVER_ADDR)%' }
+        tags:
+            - { name: monolog.processor }

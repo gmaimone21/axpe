@@ -1,0 +1,28 @@
+services:
+  redis:
+    image: redis:7.0.10
+    ports:
+      - "6379:6379"
+    command: redis-server
+    volumes:
+      - redis_data:/var/lib/redis
+
+  database:
+    image: mysql:latest
+    ports:
+      - "4306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-!ChangeMe!}
+      MYSQL_DATABASE: ${MYSQL_DB:-app}
+      # You should definitely change the password in production
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-!ChangeMe!}
+      MYSQL_USER: ${MYSQL_USER:-app}
+    volumes:
+      - database_data:/var/lib/mysql
+      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
+      # - ./docker/db/data:/var/lib/postgresql/data:rw
+
+volumes:
+  redis_data: ~
+  database_data: ~
+
